@@ -100,7 +100,7 @@ def create_atividade(descricao, status, prioridade, user_id, prazo=None, local=N
     db.session.commit()
     return atividade
 
-def get_all_atividades(page=1, per_page=10):
+def get_all_atividades(page=1, per_page=10, status=None, origem=None):
     """Get all atividades with creator info, with pagination and custom ordering"""
     from sqlalchemy.orm import aliased
     from sqlalchemy import case
@@ -137,7 +137,17 @@ def get_all_atividades(page=1, per_page=10):
         joinedload(Atividade.atendente)
     ).join(
         CriadorUser, Atividade.user_id == CriadorUser.id
-    ).order_by(
+    )
+
+    if status in ('Pendente', 'Em andamento'):
+        query = query.filter(Atividade.status == status)
+
+    if origem in ('interno', 'externo'):
+        local_normalizado = db.func.replace(db.func.lower(Atividade.local), ' ', '')
+        interno = local_normalizado.like('%cam2%')
+        query = query.filter(interno if origem == 'interno' else ~interno)
+
+    query = query.order_by(
         status_order,           # Concluída last
         prioridade_order,       # Priority order
         db.func.isnull(Atividade.prazo), # NULL prazo last
@@ -147,7 +157,7 @@ def get_all_atividades(page=1, per_page=10):
 
     return query.paginate(page=page, per_page=per_page, error_out=False)
 
-def get_atividades_by_setor(setor_nome, page=1, per_page=10):
+def get_atividades_by_setor(setor_nome, page=1, per_page=10, status=None, origem=None):
     """Get all atividades filtered by setor name, with pagination and custom ordering"""
     from sqlalchemy.orm import aliased
     from sqlalchemy import case
@@ -172,7 +182,17 @@ def get_atividades_by_setor(setor_nome, page=1, per_page=10):
         CriadorUser, Atividade.user_id == CriadorUser.id
     ).filter(
         Atividade.setor == setor_nome
-    ).order_by(
+    )
+
+    if status in ('Pendente', 'Em andamento'):
+        query = query.filter(Atividade.status == status)
+
+    if origem in ('interno', 'externo'):
+        local_normalizado = db.func.replace(db.func.lower(Atividade.local), ' ', '')
+        interno = local_normalizado.like('%cam2%')
+        query = query.filter(interno if origem == 'interno' else ~interno)
+
+    query = query.order_by(
         db.func.isnull(Atividade.prazo),  # NULL prazo last
         Atividade.prazo.asc(),  # Order by prazo first
         status_order  # Then by status priority

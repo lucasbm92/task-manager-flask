@@ -1,4 +1,4 @@
-<!DOCT    <meta name="description" content="Sistema de Gestão de Tarefas">
+<!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <style>
@@ -17,6 +17,13 @@
             position: relative;
             bottom: 0;
             width: 100%;
+        }
+        .filters-sidebar {
+            min-width: 220px;
+        }
+        .filters-sidebar .list-group-item.active {
+            background-color: #212529;
+            border-color: #212529;
         }
     </style>
 
@@ -79,23 +86,34 @@
     </div>
 
     <div class="container mt-4">
-        <ul class="nav nav-tabs mb-4" role="tablist">
-            <li class="nav-item" role="presentation">
-                <a class="nav-link active" href="{{ url_for('auth.index') }}">Todas</a>
-            </li>
-            <li class="nav-item" role="presentation">
-                <a class="nav-link" href="{{ url_for('auth.pendentes') }}">Pendentes</a>
-            </li>
-            <li class="nav-item" role="presentation">
-                <a class="nav-link" href="{{ url_for('auth.em_andamento') }}">Em andamento</a>
-            </li>
-            <li class="nav-item" role="presentation">
-                <a class="nav-link" href="{{ url_for('auth.concluido') }}">Concluídas</a>
-            </li>
-        </ul>
-    </div>
+        <div class="row g-4 align-items-start">
+            <aside class="col-12 col-md-3 col-lg-2 filters-sidebar">
+                <div class="card">
+                    <div class="card-header fw-bold">Filtrar chamados</div>
+                    <div class="list-group list-group-flush">
+                        <a class="list-group-item list-group-item-action {% if not status_filter and not origem_filter %}active{% endif %}" href="{{ url_for('auth.index') }}">Todos</a>
+                    </div>
+                    <div class="card-body pb-2">
+                        <small class="text-uppercase text-muted fw-bold">Status</small>
+                    </div>
+                    <div class="list-group list-group-flush">
+                        <a class="list-group-item list-group-item-action {% if not status_filter %}active{% endif %}" href="{{ url_for('auth.index', origem=origem_filter) }}">Todos</a>
+                        <a class="list-group-item list-group-item-action {% if status_filter == 'Pendente' %}active{% endif %}" href="{{ url_for('auth.index', status='Pendente', origem=origem_filter) }}">Pendentes</a>
+                        <a class="list-group-item list-group-item-action {% if status_filter == 'Em andamento' %}active{% endif %}" href="{{ url_for('auth.index', status='Em andamento', origem=origem_filter) }}">Em andamento</a>
+                    </div>
+                    <div class="card-body pb-2">
+                        <small class="text-uppercase text-muted fw-bold">Origem</small>
+                    </div>
+                    <div class="list-group list-group-flush">
+                        <a class="list-group-item list-group-item-action {% if not origem_filter %}active{% endif %}" href="{{ url_for('auth.index', status=status_filter) }}">Todos</a>
+                        <a class="list-group-item list-group-item-action {% if origem_filter == 'interno' %}active{% endif %}" href="{{ url_for('auth.index', origem='interno', status=status_filter) }}">Interno (CAM2)</a>
+                        <a class="list-group-item list-group-item-action {% if origem_filter == 'externo' %}active{% endif %}" href="{{ url_for('auth.index', origem='externo', status=status_filter) }}">Externo</a>
+                    </div>
+                </div>
+            </aside>
 
-    <div class="container ml-5">
+            <section class="col-12 col-md-9 col-lg-10">
+        <div class="table-responsive">
         <table class="table table-hover">
             <thead>
                 <tr>
@@ -112,7 +130,7 @@
                     {% if user.tipo == 1 %}
                         <th scope="col">Ações</th>
                     {% endif %}
-                    <th scope="col"><a href="{{ url_for('auth.new_task') }}" class="btn btn-primary btn-sm">Criar</a></th>
+                    <th scope="col"><a href="{{ url_for('auth.new_task', next=request.full_path) }}" class="btn btn-primary btn-sm">Criar</a></th>
                 </tr>
             </thead>
             <tbody>
@@ -167,12 +185,13 @@
                     <tr>
                         <td colspan="11" class="text-center text-muted">
                             <p class="my-3">Nenhuma atividade encontrada.</p>
-                            <a href="{{ url_for('auth.new_task') }}" class="btn btn-primary">Criar primeira atividade</a>
+                            <a href="{{ url_for('auth.new_task', next=request.full_path) }}" class="btn btn-primary">Criar primeira atividade</a>
                         </td>
                     </tr>
                 {% endif %}
             </tbody>
         </table>
+        </div>
         
         <!-- Pagination Controls -->
         {% if pagination and pagination.pages > 1 %}
@@ -181,7 +200,7 @@
                 <!-- First Page -->
                 {% if pagination.has_prev %}
                     <li class="page-item">
-                        <a class="page-link" href="{{ url_for('auth.index', page=1) }}" aria-label="First">
+                        <a class="page-link" href="{{ url_for('auth.index', page=1, status=status_filter, origem=origem_filter) }}" aria-label="First">
                             <span aria-hidden="true">&laquo;&laquo;</span>
                         </a>
                     </li>
@@ -194,7 +213,7 @@
                 <!-- Previous Page -->
                 {% if pagination.has_prev %}
                     <li class="page-item">
-                        <a class="page-link" href="{{ url_for('auth.index', page=pagination.prev_num) }}" aria-label="Previous">
+                        <a class="page-link" href="{{ url_for('auth.index', page=pagination.prev_num, status=status_filter, origem=origem_filter) }}" aria-label="Previous">
                             <span aria-hidden="true">&laquo;</span>
                         </a>
                     </li>
@@ -209,7 +228,7 @@
                     {% if page_num %}
                         {% if page_num != pagination.page %}
                             <li class="page-item">
-                                <a class="page-link" href="{{ url_for('auth.index', page=page_num) }}">{{ page_num }}</a>
+                                <a class="page-link" href="{{ url_for('auth.index', page=page_num, status=status_filter, origem=origem_filter) }}">{{ page_num }}</a>
                             </li>
                         {% else %}
                             <li class="page-item active" aria-current="page">
@@ -226,7 +245,7 @@
                 <!-- Next Page -->
                 {% if pagination.has_next %}
                     <li class="page-item">
-                        <a class="page-link" href="{{ url_for('auth.index', page=pagination.next_num) }}" aria-label="Next">
+                        <a class="page-link" href="{{ url_for('auth.index', page=pagination.next_num, status=status_filter, origem=origem_filter) }}" aria-label="Next">
                             <span aria-hidden="true">&raquo;</span>
                         </a>
                     </li>
@@ -239,7 +258,7 @@
                 <!-- Last Page -->
                 {% if pagination.has_next %}
                     <li class="page-item">
-                        <a class="page-link" href="{{ url_for('auth.index', page=pagination.pages) }}" aria-label="Last">
+                        <a class="page-link" href="{{ url_for('auth.index', page=pagination.pages, status=status_filter, origem=origem_filter) }}" aria-label="Last">
                             <span aria-hidden="true">&raquo;&raquo;</span>
                         </a>
                     </li>
@@ -262,6 +281,9 @@
         </div>
         {% endif %}
         {% endif %}
+    </div>
+            </section>
+        </div>
     </div>
 
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>

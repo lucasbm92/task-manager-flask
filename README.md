@@ -68,7 +68,7 @@ copy .env.example .env
 
 ### 4. Configure o Banco de Dados
 ```bash
-# Execute a migração do banco de dados
+# Crie ou atualize o schema do banco de dados
 python migrate_db.py
 ```
 
@@ -159,7 +159,7 @@ miniature-octo-giggle/
 1. **Modelos**: Adicione novos modelos em `models.py`
 2. **Rotas**: Adicione rotas em `auth.py` ou crie novos blueprints
 3. **Templates**: Crie templates HTML em `templates/`
-4. **Migrações**: Execute `migrate_db.py` para alterações no banco
+4. **Banco de dados**: Execute `python migrate_db.py` após alterações no modelo ou em um deploy novo
 
 ## 🔒 Recursos de Segurança
 

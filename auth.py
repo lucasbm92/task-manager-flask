@@ -16,8 +16,21 @@ from models import (get_user_by_username, get_user_by_email, create_user,
                    get_user_by_reset_token, update_user_password, create_atividade, 
                    get_all_atividades, get_atividades_by_setor, Atividade, db)
 import logging
+from urllib.parse import urlsplit
 
 auth_blueprint = Blueprint('auth', __name__)
+
+
+def _safe_return_url(value):
+    if not value:
+        return url_for('auth.index')
+
+    parsed_url = urlsplit(value)
+    if (not value.startswith('/') or value.startswith('//') or '\\' in value
+            or parsed_url.scheme or parsed_url.netloc):
+        return url_for('auth.index')
+
+    return value
 
 # Initialize Mail (will be configured in app.py)
 mail = Mail()
@@ -92,6 +105,13 @@ def index():
     # Get pagination parameters
     page = request.args.get('page', 1, type=int)
     per_page = 10  # 10 tasks per page
+    status_filter = request.args.get('status')
+    origem_filter = request.args.get('origem')
+
+    if status_filter not in ('Pendente', 'Em andamento'):
+        status_filter = None
+    if origem_filter not in ('interno', 'externo'):
+        origem_filter = None
     
     # Get the current user object
     from models import User, Setor
@@ -105,7 +125,13 @@ def index():
         if user_setor:
             user_setor_nome = user_setor.nome
             # Get paginated tasks that match the user's setor name
-            pagination = get_atividades_by_setor(user_setor.nome, page=page, per_page=per_page)
+            pagination = get_atividades_by_setor(
+                user_setor.nome,
+                page=page,
+                per_page=per_page,
+                status=status_filter,
+                origem=origem_filter
+            )
         else:
             # Create empty pagination object
             from sqlalchemy import text
@@ -113,7 +139,12 @@ def index():
             pagination = empty_query.paginate(page=page, per_page=per_page, error_out=False)
     else:
         # For tipo 1 users, show all tasks with pagination
-        pagination = get_all_atividades(page=page, per_page=per_page)
+        pagination = get_all_atividades(
+            page=page,
+            per_page=per_page,
+            status=status_filter,
+            origem=origem_filter
+        )
     
     atividades = pagination.items
 
@@ -215,13 +246,19 @@ def index():
                          atividades=normalized_atividades, 
                          pagination=pagination,
                          user=user, 
-                         user_setor=user_setor_nome)
+                         user_setor=user_setor_nome,
+                         status_filter=status_filter,
+                         origem_filter=origem_filter)
 
 @auth_blueprint.route('/new-task', methods=['GET', 'POST'])
 def new_task():
     if 'user_id' not in session:
         flash('Por favor, faça login para acessar esta página', 'warning')
         return redirect(url_for('auth.login'))
+
+    return_url = _safe_return_url(
+        request.form.get('next') if request.method == 'POST' else request.args.get('next')
+    )
     
     if request.method == 'POST':
         # Get form data
@@ -243,7 +280,7 @@ def new_task():
             # Validate that tipo 2 users can only create tasks in their own sector
             if setor and setor.strip() != expected_setor:
                 flash('Você só pode criar atividades no seu próprio setor.', 'error')
-                return redirect(url_for('auth.new_task'))
+                return redirect(url_for('auth.new_task', next=return_url))
             
             # Force correct values for tipo 2 users
             setor = expected_setor
@@ -253,7 +290,7 @@ def new_task():
         # Basic validation
         if not descricao or not prioridade or not local:
             flash('Descrição, Prioridade e Local são obrigatórios', 'warning')
-            return redirect(url_for('auth.new_task'))
+            return redirect(url_for('auth.new_task', next=return_url))
         
         try:
             # Determine status from checkbox: create as 'Pendente' if checked, otherwise default to 'Em andamento'
@@ -325,16 +362,17 @@ def new_task():
                     current_app.logger.warning(f"Error sending WebSocket notification: {socket_error}")
             
             flash('Atividade criada com sucesso!', 'success')
-            return redirect(url_for('auth.index'))
+            return redirect(return_url)
         except Exception as e:
             flash(f'Erro ao criar atividade: {str(e)}', 'error')
-            return redirect(url_for('auth.new_task'))
+            return redirect(url_for('auth.new_task', next=return_url))
     
     # Get current user to pass to template
     from models import User
     current_user = User.query.get(session['user_id'])
     
-    return render_template('newtask.html', username=session.get('username'), user=current_user)
+    return render_template('newtask.html', username=session.get('username'), user=current_user,
+                           return_url=return_url)
 
 @auth_blueprint.route('/update-status/<int:atividade_id>/<new_status>')
 def update_status(atividade_id, new_status):

@@ -81,6 +81,7 @@
                         {% endwith %}
 
                         <form method="POST" action="{{ url_for('auth.new_task') }}">
+  <input type="hidden" name="next" value="{{ return_url }}">
   <div class="mb-3">
     <label for="descricao" class="form-label">Descrição</label>
     <textarea class="form-control" id="descricao" name="descricao" rows="3" placeholder="Digite a descrição da atividade" required></textarea>
@@ -132,7 +133,7 @@
     {% endif %}
 
     <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-        <a href="{{ url_for('auth.index') }}" class="btn btn-secondary me-md-2">Cancelar</a>
+        <a href="{{ return_url }}" class="btn btn-secondary me-md-2">Cancelar</a>
         <button type="submit" class="btn btn-primary">Criar Atividade</button>
     </div>
 </form>
